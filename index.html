@@ -54,7 +54,7 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .chip .cd{width:7px;height:7px;border-radius:2px}
 /* Panel tabs */
 #ptabs{display:flex;border-bottom:1px solid var(--bord);padding:0 14px;flex-shrink:0}
-.ptab{padding:8px 12px;font-size:11.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--txt2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.ptab{padding:8px 12px;font-size:11.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--txt2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;background:none;border-top:none;border-left:none;border-right:none;border-radius:0;font-family:inherit;-webkit-appearance:none}
 .ptab.on{color:var(--acc);border-bottom-color:var(--acc)}
 /* Panel body */
 #pbody{flex:1;overflow-y:auto;padding:12px 14px 28px;-webkit-overflow-scrolling:touch}
@@ -85,6 +85,17 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .sarch{font-size:10px;color:var(--txt2);margin-top:3px}
 
 .empty{text-align:center;padding:28px 14px;color:var(--txt2);font-size:13px}
+.scard{background:var(--surf2);border-radius:10px;padding:12px 13px;margin-bottom:10px;border-left:3px solid var(--acc)}
+.scard-title{font-size:15px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.stag{font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;background:rgba(212,168,83,.15);color:var(--acc);border-radius:4px;padding:2px 7px}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.sitem{background:rgba(255,255,255,.04);border-radius:6px;padding:7px 9px}
+.sitem-label{font-size:9.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--txt2);margin-bottom:2px}
+.sitem-val{font-size:14px;font-weight:700;color:var(--txt)}
+.sitem-unit{font-size:10px;color:var(--txt2);font-weight:400}
+.sdivider{height:1px;background:var(--bord);margin:8px 0}
+.sseed{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:3px}
+.sseed-label{color:var(--txt2)}.sseed-val{color:var(--txt);font-weight:600}
 .scard{background:var(--surf2);border-radius:10px;padding:12px 13px;margin-bottom:10px;border-left:3px solid var(--acc)}
 .scard-title{font-size:15px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .scard-title .stag{font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;background:rgba(212,168,83,.15);color:var(--acc);border-radius:4px;padding:2px 7px}
@@ -132,9 +143,9 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
     <div id="pmeta"></div>
   </div>
   <div id="ptabs">
-    <div class="ptab on" data-tab="pulv" onclick="switchPTab(this)">💧 Pulverizaciones</div>
-    <div class="ptab" data-tab="suelos" onclick="switchPTab(this)">🌱 Suelos</div>
-    <div class="ptab" data-tab="siembra" onclick="switchPTab(this)">🌾 Siembra</div>
+    <button class="ptab on" data-tab="pulv">💧 Pulverizaciones</button>
+    <button class="ptab" data-tab="suelos">🌱 Suelos</button>
+    <button class="ptab" data-tab="siembra">🌾 Siembra</button>
   </div>
   <div id="pbody"></div>
 </div>
@@ -336,7 +347,21 @@ document.querySelectorAll('.ybtn').forEach(b=>b.addEventListener('click',()=>{
   b.classList.add('on');
   draw();
 }));
-// ptab switching handled by inline onclick
+// ptab switching — event delegation on container (works on iOS)
+document.getElementById('ptabs').addEventListener('click',function(e){
+  const btn=e.target.closest('.ptab');
+  if(!btn)return;
+  activeTab=btn.dataset.tab;
+  document.querySelectorAll('.ptab').forEach(x=>x.classList.remove('on'));
+  btn.classList.add('on');
+  renderTab();
+});
+function switchPTab(el){
+  activeTab=el.dataset.tab;
+  document.querySelectorAll('.ptab').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  renderTab();
+}
 
 // ── PANEL ──
 function openP(lote){
@@ -359,6 +384,7 @@ function closeP(){
 }
 function renderTab(){
   if(activeTab==='pulv')renderPulv();
+  else if(activeTab==='siembra')renderSiembra();
   else renderSuelos();
 }
 
@@ -470,6 +496,46 @@ function renderSuelos(){
       </table><div class="sarch">${an.archivo}</div></div>`;
   });
   body.innerHTML=html||`<div class="empty">Sin datos</div>`;
+}
+
+// ── SIEMBRA ──
+function siembraKey(lote){
+  const pfx={fina_la_manga:'lm',fina_la_turca:'lt',fina_san_fermin:'sf',fina_becutti:'b'};
+  const p=pfx[lote.layer]||'';
+  const campoDB=D.siembra[lote.layer];
+  if(!campoDB)return null;
+  let num=lote.name.replace(new RegExp('^'+p,'i'),'').replace(/^_/,'')
+    .replace(/_bajo$/i,'').replace(/_juncos$/i,'');
+  const nl=num.toLowerCase();
+  for(const k of Object.keys(campoDB)){
+    if(k.replace(/^LOTE\s*/i,'').toLowerCase()===nl)return k;
+  }
+  return null;
+}
+
+function renderSiembra(){
+  const body=document.getElementById('pbody');
+  const campoDB=D.siembra[selLote.layer];
+  if(!campoDB){body.innerHTML=`<div class="empty">Sin datos de siembra para este campo</div>`;return;}
+  const key=siembraKey(selLote);
+  if(!key){body.innerHTML=`<div class="empty">Sin datos de siembra para este lote</div>`;return;}
+  const s=campoDB[key];
+  const antLabel={'GR':'Girasol','TR':'Trigo','CB':'Cebada','MZ':'Maíz','SJ':'Soja'}[s.ant]||s.ant;
+  const fertHTML=(s.map_ha>0?`<div class="sitem"><div class="sitem-label">MAP 11-52-0</div><div class="sitem-val">${s.map_ha} <span class="sitem-unit">kg/ha</span></div></div>`:'')+
+    (s.dap_ha>0?`<div class="sitem"><div class="sitem-label">DAP 18-46-0</div><div class="sitem-val">${s.dap_ha} <span class="sitem-unit">kg/ha</span></div></div>`:'');
+  body.innerHTML=`<div class="scard">
+    <div class="scard-title">${s.variedad} <span class="stag">${s.cultivo}</span></div>
+    <div class="sgrid">
+      <div class="sitem"><div class="sitem-label">Semilla</div><div class="sitem-val">${s.kg_ha} <span class="sitem-unit">kg/ha</span></div></div>
+      <div class="sitem"><div class="sitem-label">Antecesor</div><div class="sitem-val">${antLabel}</div></div>
+      ${fertHTML}
+    </div>
+    <div class="sdivider"></div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--txt2);margin-bottom:6px">Calidad de semilla</div>
+    <div class="sseed"><span class="sseed-label">PG (Poder germinativo)</span><span class="sseed-val">${(s.pg*100).toFixed(0)}%</span></div>
+    <div class="sseed"><span class="sseed-label">P1000 (Peso mil semillas)</span><span class="sseed-val">${s.p1000} g</span></div>
+    <div class="sseed"><span class="sseed-label">N° análisis</span><span class="sseed-val">${s.analisis||'—'}</span></div>
+  </div>`;
 }
 
 // ── PAN & ZOOM (pointer events) ──
