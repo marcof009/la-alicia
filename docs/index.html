@@ -3,9 +3,9 @@
 <head>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="La Alicia">
+<meta name="apple-mobile-web-app-title" content="Campo">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>La Alicia — Lotes</title>
+<title>Campo — Gestión</title>
 <style>
 :root {
   --bg:#0d1117; --surf:#161c26; --surf2:#1e2635; --bord:rgba(255,255,255,0.08);
@@ -141,12 +141,28 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .sdivider{height:1px;background:var(--bord);margin:8px 0}
 .sseed{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:3px}
 .sseed-label{color:var(--txt2)}.sseed-val{color:var(--txt);font-weight:600}
+
+/* LOGIN */
+#login-screen{position:fixed;top:0;left:0;right:0;bottom:0;z-index:2000;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0}
+.login-box{width:100%;max-width:340px;padding:32px 24px;display:flex;flex-direction:column;gap:0}
+.login-logo{font-size:36px;text-align:center;margin-bottom:8px}
+.login-title{font-size:22px;font-weight:700;color:var(--txt);text-align:center;margin-bottom:4px;letter-spacing:-.3px}
+.login-sub{font-size:13px;color:var(--txt2);text-align:center;margin-bottom:28px}
+.login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.login-field label{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--txt2)}
+.login-field input{background:var(--surf2);border:1px solid var(--bord);border-radius:10px;padding:12px 14px;font-size:15px;color:var(--txt);font-family:inherit;outline:none;-webkit-appearance:none;width:100%}
+.login-field input:focus{border-color:var(--acc)}
+.login-btn{background:var(--acc);color:#000;font-size:15px;font-weight:700;border:none;border-radius:10px;padding:14px;cursor:pointer;font-family:inherit;margin-top:6px;-webkit-appearance:none;width:100%}
+.login-btn:active{opacity:.85}
+.login-err{color:#ef5350;font-size:13px;text-align:center;margin-top:10px;min-height:18px}
+.login-hidden{display:none!important}
 </style>
 </head>
 <body>
 
 <div id="hdr">
   <h1>La <em>Alicia</em></h1>
+  <button onclick="logout()" style="background:none;border:1px solid var(--bord);border-radius:7px;color:var(--txt2);font-size:11px;padding:5px 10px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Salir</button>
 </div>
 
 <div id="ctabs">
@@ -167,6 +183,24 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
   <canvas id="cv"></canvas>
 </div>
 
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🌾</div>
+    <div class="login-title">Campo</div>
+    <div class="login-sub">Gestión de lotes</div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="login-user" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="usuario">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
 <div id="loading" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:#0d1117;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px">
   <div style="font-size:28px">🌾</div>
   <div style="color:#d4a853;font-size:15px;font-weight:600">La Alicia</div>
@@ -204,16 +238,73 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 
 <script>
 // Data loaded from external data.json
+
+// ── USERS ──
+const USERS = {
+  "marcos":    {hash:"801a302dae665c427b70d1d56f78ca729579bdc3a4f68ef8351942ab928ea43c", clients:["all"]},
+  "la_alicia": {hash:"e9b71991b7f947a3467fff8aeb5f6944a34cb9c5f9ab9e605411dd3655190c6c", clients:["la_alicia"]},
+  "alan":      {hash:"85a5d410dc0cde3bbeccf5409a0bd462a1eed914bd586b27220a0702bf26d09f", clients:["alan"]},
+  "mauricio":  {hash:"75d64af6c0d20231bf1b887eaef7d420eabfc25266a95b8c00db16c5aa13efe9", clients:["mauricio"]},
+  "el_puntal": {hash:"350853890fb39f0fcfdd9d754bf3536b4c2a28a14818fc6da9f357218b1ed7fb", clients:["el_puntal"]},
+  "la_chicha": {hash:"dc4513e5e59b19f255710c9db029e6b54f2bac4a4afae12b1efb780566dbefff", clients:["la_chicha"]}
+};
+let currentUser = null;
+
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function doLogin(){
+  const user = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-err');
+  err.textContent = '';
+  if(!user||!pass){err.textContent='Completá usuario y contraseña.';return;}
+  const h = await sha256(pass);
+  const u = USERS[user];
+  if(!u||u.hash!==h){err.textContent='Usuario o contraseña incorrectos.';return;}
+  currentUser = {name:user, clients:u.clients};
+  // Save session
+  sessionStorage.setItem('campo_user', JSON.stringify(currentUser));
+  document.getElementById('login-screen').classList.add('login-hidden');
+  loadData();
+}
+
+function checkSession(){
+  const saved = sessionStorage.getItem('campo_user');
+  if(saved){
+    currentUser = JSON.parse(saved);
+    document.getElementById('login-screen').classList.add('login-hidden');
+    return true;
+  }
+  // Enter on password field
+  document.getElementById('login-pass').addEventListener('keydown', e=>{
+    if(e.key==='Enter') doLogin();
+  });
+  return false;
+}
+
+function logout(){
+  sessionStorage.removeItem('campo_user');
+  location.reload();
+}
+
 let D = null;
 
 async function loadData(){
   try {
-    const resp = await fetch('data.json');
+    // Determine which data file to load
+    const clientKey = currentUser.clients[0]==='all' ? 'la_alicia' : currentUser.clients[0];
+    const resp = await fetch(`data/${clientKey}.json`);
     D = await resp.json();
+    // Update title with client name
+    const clientLabels = {la_alicia:'La Alicia',alan:'Alan',mauricio:'Mauricio',el_puntal:'El Puntal',la_chicha:'La Chicha'};
+    document.querySelector('#hdr h1').innerHTML = clientLabels[clientKey]||clientKey;
     document.getElementById('loading').style.display='none';
     init();
   } catch(e) {
-    document.getElementById('loading').innerHTML='<div style="color:#ef5350;padding:20px">Error cargando datos.<br>Verificá que data.json esté en la misma carpeta.</div>';
+    document.getElementById('loading').innerHTML='<div style="color:#ef5350;padding:20px">Error cargando datos.<br>Verificá conexión.</div>';
   }
 }
 
@@ -778,7 +869,11 @@ function init(){
   draw();
 }
 window.addEventListener('resize',()=>{resize();});
-loadData();
+if(!checkSession()) {
+  // Show login - user needs to log in
+} else {
+  loadData();
+}
 </script>
 </body>
 </html>
