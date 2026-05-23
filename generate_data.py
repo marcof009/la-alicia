@@ -62,7 +62,7 @@ CAMPO_MAP = {
 }
 pulv = {}
 if os.path.exists(PULV_FILE):
-    df = pd.read_excel(PULV_FILE, sheet_name='LA ALICIA', header=None)
+    df = pd.read_excel(PULV_FILE, sheet_name='LA ALICIA', header=None, engine='openpyxl')
     headers = df.iloc[4]
     # Columnas de productos (col 14 en adelante con nombre)
     product_cols = {
