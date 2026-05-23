@@ -84,6 +84,40 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .stbl tr:last-child td{border-bottom:none}
 .sarch{font-size:10px;color:var(--txt2);margin-top:3px}
 
+/* RESUMEN PANEL */
+#rpnl{position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--surf);border-top:1px solid var(--bord);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform .32s cubic-bezier(.25,.8,.25,1);max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+#rpnl.open{transform:translateY(0)}
+#rpnl-handle{width:34px;height:4px;border-radius:2px;background:var(--bord);margin:9px auto 0;flex-shrink:0;cursor:pointer}
+#rpclose{position:absolute;top:10px;right:12px;width:26px;height:26px;border-radius:50%;background:var(--surf2);border:1px solid var(--bord);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--txt2);z-index:10}
+#rphdr{padding:10px 40px 8px 14px;border-bottom:1px solid var(--bord);flex-shrink:0}
+#rptitle{font-size:17px;font-weight:700;letter-spacing:-.2px}
+#rpmeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+#rpbody{flex:1;overflow-y:auto;padding:12px 14px 28px;-webkit-overflow-scrolling:touch}
+/* Resumen table */
+.rtbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
+.rtbl th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--txt2);padding:5px 8px;border-bottom:1px solid var(--bord)}
+.rtbl td{padding:5px 8px;color:var(--txt);border-bottom:1px solid rgba(255,255,255,.04)}
+.rtbl tr:last-child td{border-bottom:none;font-weight:700;color:var(--acc)}
+.rtbl .crop-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.rtbl .pct{color:var(--txt2);font-size:11px}
+/* Bar chart */
+.rchart-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--txt2);margin-bottom:8px}
+.rbar-wrap{margin-bottom:10px}
+.rbar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--txt);margin-bottom:3px}
+.rbar-track{height:20px;background:rgba(255,255,255,.06);border-radius:4px;position:relative;overflow:hidden}
+.rbar-campo{height:100%;border-radius:4px;position:absolute;left:0;top:0;transition:width .4s}
+.rbar-empresa{height:6px;border-radius:2px;position:absolute;left:0;bottom:0;opacity:.5}
+.rbar-legend{display:flex;gap:12px;margin-top:8px;margin-bottom:14px}
+.rbar-leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--txt2)}
+.rbar-leg-dot{width:10px;height:10px;border-radius:2px}
+.rtotals{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px}
+.rtotal-item{background:var(--surf2);border-radius:8px;padding:8px 10px}
+.rtotal-label{font-size:9.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--txt2);margin-bottom:2px}
+.rtotal-val{font-size:16px;font-weight:700;color:var(--txt)}
+.rtotal-unit{font-size:10px;color:var(--txt2);font-weight:400}
+.rsection-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--txt2);margin:14px 0 8px;display:flex;align-items:center;gap:7px}
+.rsection-title::after{content:'';flex:1;height:1px;background:var(--bord)}
+
 .empty{text-align:center;padding:28px 14px;color:var(--txt2);font-size:13px}
 .scard{background:var(--surf2);border-radius:10px;padding:12px 13px;margin-bottom:10px;border-left:3px solid var(--acc)}
 .scard-title{font-size:15px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:8px}
@@ -116,10 +150,10 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 </div>
 
 <div id="ctabs">
-  <div class="ctab on" data-campo="fina_la_turca">La Turca</div>
-  <div class="ctab" data-campo="fina_la_manga">La Manga</div>
-  <div class="ctab" data-campo="fina_san_fermin">San Fermín</div>
-  <div class="ctab" data-campo="fina_becutti">Becutti</div>
+  <div class="ctab on" data-campo="fina_la_turca" onclick="switchCampo(this)">La Turca</div>
+  <div class="ctab" data-campo="fina_la_manga" onclick="switchCampo(this)">La Manga</div>
+  <div class="ctab" data-campo="fina_san_fermin" onclick="switchCampo(this)">San Fermín</div>
+  <div class="ctab" data-campo="fina_becutti" onclick="switchCampo(this)">Becutti</div>
 </div>
 
 <div id="ypill">
@@ -141,8 +175,20 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 
 <div id="leg"><h4>Cultivo</h4><div id="legitems"></div></div>
 
+<button id="resumen-btn" onclick="toggleResumen()" style="position:fixed;bottom:24px;left:10px;z-index:50;background:rgba(13,17,23,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--bord);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--acc);cursor:pointer;font-family:inherit;-webkit-appearance:none">📊 Resumen</button>
+
+<!-- RESUMEN PANEL -->
+<div id="rpnl">
+  <div id="rpnl-handle" onclick="toggleResumen()"></div>
+  <div id="rpclose" onclick="toggleResumen()">✕</div>
+  <div id="rphdr">
+    <div id="rptitle">Resumen — <span id="rpcampo"></span></div>
+    <div id="rpmeta"></div>
+  </div>
+  <div id="rpbody"></div>
+</div>
+
 <div id="pnl">
-  <div id="pnl-handle" onclick="closeP()"></div>
   <div id="pclose" onclick="closeP()">✕</div>
   <div id="phdr">
     <div id="ptitle"></div>
@@ -354,12 +400,7 @@ function buildLegend(){
 }
 
 // ── TABS ──
-document.querySelectorAll('.ctab').forEach(t=>t.addEventListener('click',()=>{
-  campo=t.dataset.campo;
-  document.querySelectorAll('.ctab').forEach(x=>x.classList.remove('on'));
-  t.classList.add('on');
-  closeP(); initVP(); draw();
-}));
+// ctab switching handled by inline onclick via switchCampo()
 document.querySelectorAll('.ybtn').forEach(b=>b.addEventListener('click',()=>{
   yr=b.dataset.yr;
   document.querySelectorAll('.ybtn').forEach(x=>x.classList.remove('on'));
@@ -555,6 +596,96 @@ function renderSiembra(){
     <div class="sseed"><span class="sseed-label">P1000 (Peso mil semillas)</span><span class="sseed-val">${s.p1000} g</span></div>
     <div class="sseed"><span class="sseed-label">N° análisis</span><span class="sseed-val">${s.analisis||'—'}</span></div>
   </div>`;
+}
+
+// ── RESUMEN ──
+let resumenOpen=false;
+function toggleResumen(){
+  resumenOpen=!resumenOpen;
+  if(resumenOpen){closeP();renderResumen();document.getElementById('rpnl').classList.add('open');}
+  else document.getElementById('rpnl').classList.remove('open');
+}
+function renderResumen(){
+  if(!D)return;
+  const CL2={fina_la_manga:'La Manga',fina_la_turca:'La Turca',fina_san_fermin:'San Fermín',fina_becutti:'Becutti'};
+  document.getElementById('rpcampo').textContent=CL2[campo]||campo;
+  function esFina(v){return['trigo','cebada','avena','rye'].includes(ck(v));}
+  function esGruesa(v){return['maiz','soja','girasol','sorgo','pisingallo'].includes(ck(v));}
+  function computeStats(lotes){
+    const byCrop={},tot={total:0,fina:0,gruesa:0,cn:0};
+    lotes.forEach(l=>{
+      const ha=parseFloat(l.area)||0;const val=l[yr];const k2=ck(val);const lbl=cl(val);
+      if(!byCrop[lbl])byCrop[lbl]={ha:0,key:k2};
+      byCrop[lbl].ha+=ha;tot.total+=ha;
+      if(esFina(val))tot.fina+=ha;else if(esGruesa(val))tot.gruesa+=ha;else tot.cn+=ha;
+    });
+    return{byCrop,tot};
+  }
+  const cL=D.lotes.filter(l=>l.layer===campo);
+  const eL=D.lotes;
+  const cS=computeStats(cL);const eS=computeStats(eL);
+  document.getElementById('rpmeta').innerHTML=
+    `<div class="chip">📐 ${Math.round(cS.tot.total)} ha campo</div>`+
+    `<div class="chip">🏢 ${Math.round(eS.tot.total)} ha empresa</div>`;
+  const maxHa=eS.tot.total||1;
+  let html=`<div class="rtotals">
+    <div class="rtotal-item"><div class="rtotal-label">Total campo</div><div class="rtotal-val">${Math.round(cS.tot.total)} <span class="rtotal-unit">ha</span></div></div>
+    <div class="rtotal-item"><div class="rtotal-label">Fina</div><div class="rtotal-val">${Math.round(cS.tot.fina)} <span class="rtotal-unit">ha</span></div></div>
+    <div class="rtotal-item"><div class="rtotal-label">Gruesa</div><div class="rtotal-val">${Math.round(cS.tot.gruesa)} <span class="rtotal-unit">ha</span></div></div>
+  </div>`;
+  // Table
+  html+=`<div class="rsection-title">Detalle por lote</div>
+  <table class="rtbl"><thead><tr><th>Lote</th><th>Cultivo</th><th>Tipo</th><th>Ha</th><th>%</th></tr></thead><tbody>`;
+  [...cL].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).forEach(l=>{
+    const ha=parseFloat(l.area)||0;const val=l[yr];const k2=ck(val);
+    const tipo=esFina(val)?'Fina':esGruesa(val)?'Gruesa':'C.N.';
+    const pct=cS.tot.total>0?(ha/cS.tot.total*100).toFixed(0):'0';
+    html+=`<tr><td><b>${l.name.toUpperCase()}</b></td><td><span class="crop-dot" style="background:${CC[k2]||CC.default}"></span>${cl(val)}</td><td>${tipo}</td><td>${ha}</td><td class="pct">${pct}%</td></tr>`;
+  });
+  html+=`<tr><td colspan="3"><b>TOTAL</b></td><td><b>${Math.round(cS.tot.total)}</b></td><td class="pct">100%</td></tr></tbody></table>`;
+  // Bar chart
+  html+=`<div class="rsection-title">Campo vs Empresa</div>
+  <div class="rbar-legend">
+    <div class="rbar-leg-item"><div class="rbar-leg-dot" style="background:var(--acc)"></div>Este campo</div>
+    <div class="rbar-leg-item"><div class="rbar-leg-dot" style="background:#4a90d9;opacity:.6"></div>Empresa total</div>
+  </div>`;
+  const allCrops=[...new Set([...Object.keys(cS.byCrop),...Object.keys(eS.byCrop)])]
+    .sort((a,b)=>(cS.byCrop[b]?.ha||0)-(cS.byCrop[a]?.ha||0));
+  allCrops.forEach(lbl=>{
+    const cHa=cS.byCrop[lbl]?.ha||0;const eHa=eS.byCrop[lbl]?.ha||0;
+    const k2=cS.byCrop[lbl]?.key||eS.byCrop[lbl]?.key||'default';
+    const color=CC[k2]||CC.default;
+    html+=`<div class="rbar-wrap">
+      <div class="rbar-label"><span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle;background:${color}"></span>${lbl}</span>
+      <span style="color:var(--txt2);font-size:11px">${Math.round(cHa)} / ${Math.round(eHa)} ha</span></div>
+      <div class="rbar-track">
+        <div class="rbar-empresa" style="width:${(eHa/maxHa*100).toFixed(1)}%;background:#4a90d9"></div>
+        <div class="rbar-campo" style="width:${(cHa/maxHa*100).toFixed(1)}%;background:${color}"></div>
+      </div>
+    </div>`;
+  });
+  // Fina/Gruesa summary
+  html+=`<div class="rsection-title">Fina vs Gruesa</div>`;
+  [['Fina',Math.round(cS.tot.fina),Math.round(eS.tot.fina),'#ef6c6c'],
+   ['Gruesa',Math.round(cS.tot.gruesa),Math.round(eS.tot.gruesa),'#66bb6a'],
+   ['Campo Natural',Math.round(cS.tot.cn),Math.round(eS.tot.cn),'#8d6e63']].forEach(([lbl,c,e,color])=>{
+    html+=`<div class="rbar-wrap">
+      <div class="rbar-label"><span>${lbl}</span><span style="color:var(--txt2);font-size:11px">${c} / ${e} ha</span></div>
+      <div class="rbar-track">
+        <div class="rbar-empresa" style="width:${(e/maxHa*100).toFixed(1)}%;background:#4a90d9"></div>
+        <div class="rbar-campo" style="width:${(c/maxHa*100).toFixed(1)}%;background:${color}"></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('rpbody').innerHTML=html;
+}
+function switchCampo(el){
+  campo=el.dataset.campo;
+  document.querySelectorAll('.ctab').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  selLote=null;closeP();
+  if(resumenOpen)renderResumen();
+  initVP();draw();
 }
 
 // ── PAN & ZOOM (pointer events) ──
