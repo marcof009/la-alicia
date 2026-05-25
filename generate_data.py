@@ -142,7 +142,7 @@ CAMPO_KEY_MAP = {
 }
 if os.path.exists(SIEMBRA_FILE):
     df_si = pd.read_excel(SIEMBRA_FILE, sheet_name=0, header=0)
-def sf(v, d=0):
+        def sf(v, d=0):
             try:
                 f = float(v)
                 return d if f != f else f
