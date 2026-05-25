@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
 generate_data.py
-Lee los archivos de /data/ y genera /docs/data.json
-Correr localmente o via GitHub Actions cuando cambia algo en /data/
+Lee los archivos de /data/ y genera /docs/data/la_alicia.json
 """
 
 import geopandas as gpd
@@ -11,10 +10,17 @@ import json, os, re
 
 BASE     = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE, 'data')
-OUT_DIR  = os.path.join(BASE, 'docs')
+OUT_DIR  = os.path.join(BASE, 'docs', 'data')
 os.makedirs(OUT_DIR, exist_ok=True)
 
-# ── 1. SHAPEFILES ──────────────────────────────────────────────────────────
+def safe_float(v, d=0):
+    try:
+        f = float(v)
+        return d if f != f else f
+    except:
+        return d
+
+# ── 1. SHAPEFILES ──
 print("Leyendo shapefiles...")
 lotes = []
 SHP_MAP = [
@@ -47,10 +53,7 @@ for shp_name, layer, campo_label in SHP_MAP:
         })
     print(f"  {campo_label}: {len(gdf)} lotes")
 
-# ── 2. PULVERIZACIONES ─────────────────────────────────────────────────────
-# Formato: planilla maestra con una fila por aplicación
-# Columnas fijas: 0=Fecha, 1=Campo, 2=Lote, 3=Cultivo, 4=Has, 5=Estado,
-#                 6=Rec Nro, 7=Observacion — desde col 14 en adelante: productos
+# ── 2. PULVERIZACIONES ──
 print("Leyendo pulverizaciones...")
 PULV_FILE = os.path.join(DATA_DIR, 'PULVERIZACIONES_La_Alicia.xlsx')
 CAMPO_MAP = {
@@ -64,7 +67,6 @@ pulv = {}
 if os.path.exists(PULV_FILE):
     df = pd.read_excel(PULV_FILE, sheet_name='LA ALICIA', header=None, engine='openpyxl')
     headers = df.iloc[4]
-    # Columnas de productos (col 14 en adelante con nombre)
     product_cols = {
         i: str(headers[i]).strip()
         for i in range(14, len(headers))
@@ -77,12 +79,10 @@ if os.path.exists(PULV_FILE):
         lote = str(row[2]).strip() if pd.notna(row[2]) else ''
         if not lote or lote == 'nan': continue
         lote_key = ('LOTE ' + lote.upper()) if not lote.upper().startswith('LOTE') else lote.upper()
-        # Fecha
         fecha = ''
         if pd.notna(row[0]):
             try:    fecha = pd.to_datetime(row[0]).strftime('%d/%m/%Y')
             except: fecha = str(row[0])
-        # Productos usados (dosis != 0/vacío)
         productos = [
             {'n': product_cols[i], 'd': str(row[i]).strip()}
             for i in product_cols
@@ -101,7 +101,7 @@ if os.path.exists(PULV_FILE):
 else:
     print(f"  AVISO: {PULV_FILE} no encontrado")
 
-# ── 3. ANÁLISIS DE SUELOS ──────────────────────────────────────────────────
+# ── 3. SUELOS ──
 print("Leyendo análisis de suelos...")
 SUELOS_FILE = os.path.join(DATA_DIR, 'analisis_suelos.xlsx')
 PARAMS = ['N-NO3','Fósforo','N Min.','S-Sulfato','MO','Zinc','pH','Humedad','Boro']
@@ -130,7 +130,7 @@ if os.path.exists(SUELOS_FILE):
 else:
     print(f"  AVISO: {SUELOS_FILE} no encontrado")
 
-# ── 4. SIEMBRA ─────────────────────────────────────────────────────────────
+# ── 4. SIEMBRA ──
 print("Leyendo siembra...")
 SIEMBRA_FILE = os.path.join(DATA_DIR, 'siembra.xlsx')
 siembra = {}
@@ -142,12 +142,6 @@ CAMPO_KEY_MAP = {
 }
 if os.path.exists(SIEMBRA_FILE):
     df_si = pd.read_excel(SIEMBRA_FILE, sheet_name=0, header=0)
-        def sf(v, d=0):
-            try:
-                f = float(v)
-                return d if f != f else f
-            except:
-                return d
     for _, row in df_si.iterrows():
         campo = str(row.get('Campo','')).strip().upper()
         lote  = str(row.get('Lote','')).strip()
@@ -157,22 +151,25 @@ if os.path.exists(SIEMBRA_FILE):
         siembra.setdefault(ck, {})[lote] = {
             'cultivo':  str(row.get('Cultivo','')),
             'variedad': str(row.get('Variedad','')),
-            'kg_ha':    sf(row.get('Kg_ha')),
-            'map_ha':   sf(row.get('MAP_ha')),
-            'dap_ha':   sf(row.get('DAP_ha')),
+            'kg_ha':    safe_float(row.get('Kg_ha')),
+            'map_ha':   safe_float(row.get('MAP_ha')),
+            'dap_ha':   safe_float(row.get('DAP_ha')),
             'ant':      str(row.get('Antecesor','')),
-            'pg':       sf(row.get('PG')),
-            'p1000':    sf(row.get('P1000')),
+            'pg':       safe_float(row.get('PG')),
+            'p1000':    safe_float(row.get('P1000')),
+            'analisis': str(row.get('Analisis','')),
         }
     total = sum(len(l) for l in siembra.values())
     print(f"  {total} lotes con datos de siembra")
 else:
     print(f"  AVISO: {SIEMBRA_FILE} no encontrado")
 
-# ── 5. GUARDAR ─────────────────────────────────────────────────────────────
+# ── 5. GUARDAR ──
 output = {'lotes': lotes, 'pulv': pulv, 'suelos': suelos, 'siembra': siembra}
-out_path = os.path.join(OUT_DIR, 'data', 'la_alicia.json')
+raw = json.dumps(output, ensure_ascii=False, separators=(',', ':'))
+assert 'NaN' not in raw, "NaN encontrado en el JSON!"
+out_path = os.path.join(OUT_DIR, 'la_alicia.json')
 with open(out_path, 'w', encoding='utf-8') as f:
-    json.dump(output, f, ensure_ascii=False, separators=(',', ':'))
+    f.write(raw)
 size = os.path.getsize(out_path)
-print(f"\nOK — data.json: {out_path} ({size:,} bytes, {size//1024} KB)")
+print(f"\nOK — la_alicia.json: {out_path} ({size:,} bytes, {size//1024} KB)")
