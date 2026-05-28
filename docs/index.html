@@ -447,7 +447,7 @@ function draw(){
 
   const lotes=visLotes();
   lotes.forEach(l=>{
-    const val=l[yr];
+    const val=getCultivo(l);
     const fill=cc(val);
     const isSel=selLote&&selLote.name===l.name&&selLote.layer===l.layer;
 
@@ -529,7 +529,7 @@ function pointInRing(x,y,ring){
 // ── LEGEND ──
 function buildLegend(){
   const seen=new Set();
-  visLotes().forEach(l=>{const k=ck(l[yr]);if(k!=='default')seen.add(k);});
+  visLotes().forEach(l=>{const k=ck(getCultivo(l));if(k!=='default')seen.add(k);});
   document.getElementById('legitems').innerHTML=[...seen].map(k=>
     `<div class="li"><div class="ld" style="background:${CC[k]||CC.default}"></div>${CL[k]||k}</div>`
   ).join('');
@@ -565,7 +565,7 @@ function openP(lote){
   const CL2={fina_la_manga:'La Manga',fina_la_turca:'La Turca',fina_san_fermin:'San Fermín',fina_becutti:'Becutti'};
   document.getElementById('ptitle').textContent=lote.name.toUpperCase()+' — '+(CL2[lote.layer]||lote.layer);
   const yrLabel={r26:'2026',r25:'2025',r24:'2024',r23:'2023'}[yr];
-  const val=lote[yr];
+  const val=getCultivo(lote);
   document.getElementById('pmeta').innerHTML=
     `<div class="chip"><div class="cd" style="background:${cc(val)}"></div>${cl(val)} ${yrLabel}</div>`+
     `<div class="chip">📐 ${lote.area} ha</div>`+
@@ -599,6 +599,18 @@ function findKey(campoDB, rawNum){
     if(kn === norm) return k;
   }
   return null;
+}
+
+function getCultivo(lote){
+  // Use siembra data if available for current year (r26), else fallback to SHP
+  if(yr==='r26' && D.siembra){
+    const key=siembraKey(lote);
+    if(key){
+      const s=D.siembra[lote.layer]?.[key];
+      if(s&&s.cultivo) return s.cultivo;
+    }
+  }
+  return lote[yr]||'';
 }
 
 function pulvKey(lote){
@@ -767,7 +779,7 @@ function renderResumen(){
   function computeStats(lotes){
     const byCrop={},tot={total:0,fina:0,gruesa:0,cn:0};
     lotes.forEach(l=>{
-      const ha=parseFloat(l.area)||0;const val=l[yr];const k2=ck(val);const lbl=cl(val);
+      const ha=parseFloat(l.area)||0;const val=getCultivo(l);const k2=ck(val);const lbl=cl(val);
       if(!byCrop[lbl])byCrop[lbl]={ha:0,key:k2};
       byCrop[lbl].ha+=ha;tot.total+=ha;
       if(esFina(val))tot.fina+=ha;else if(esGruesa(val))tot.gruesa+=ha;else tot.cn+=ha;
